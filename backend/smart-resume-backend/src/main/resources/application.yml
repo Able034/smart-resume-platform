@@ -1,0 +1,5 @@
+spring:
+  application:
+    name: smart-resume-backend
+  profiles:
+    active: dev
