@@ -1,0 +1,31 @@
+
+@startuml
+skinparam shadowing false
+skinparam monochrome false
+skinparam defaultFontName Microsoft YaHei
+skinparam sequenceMessageAlign center
+title UC-05 Parse Job URL and Analyze Matching - Sequence Diagram
+actor User
+boundary JobPage
+control JobController
+control JobService
+control JobCrawler
+control JobAnalysisAgent
+database ResumeRepository
+database JobRepository
+entity Job
+
+User -> JobPage : submitJobUrl(resumeId,jobUrl)
+JobPage -> JobController : POST /resumes/{resumeId}/jobs/analyze
+JobController -> JobService : analyzeJob(userId,resumeId,jobUrl)
+JobService -> ResumeRepository : loadResumeDetail(resumeId)
+JobService -> JobRepository : save(Job PENDING)
+JobService -> JobCrawler : crawl(jobUrl)
+JobCrawler --> JobService : job content
+JobService -> JobAnalysisAgent : analyzeFit(resume,jobContent)
+JobAnalysisAgent --> JobService : matchScore + suitable + confidenceSource
+JobService -> Job : merge content and analysis
+JobService -> JobRepository : update(Job PARSED)
+JobService --> JobController : job analysis result
+JobController --> JobPage : result
+@enduml

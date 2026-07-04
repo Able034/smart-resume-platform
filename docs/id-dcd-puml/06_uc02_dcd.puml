@@ -1,0 +1,56 @@
+
+@startuml
+skinparam shadowing false
+skinparam monochrome false
+skinparam defaultFontName Microsoft YaHei
+skinparam sequenceMessageAlign center
+title UC-02 Parse PDF Resume and Save Structured Resume - DCD
+class ResumeController <<controller>> {
+  +uploadPdf(file)
+}
+class ResumeService <<service>> {
+  +parseAndSave(userId,pdfFile)
+  +buildResume(dto)
+  +saveDetailInfo(dto,resumeId)
+}
+class PdfTextExtractor <<service>> {
+  +extractText(pdfFile)
+}
+class ResumeParseAgent <<agent>> {
+  +parse(rawText)
+  +validateByPydantic(result)
+}
+class StandardResumeDTO <<dto>> {
+  +title
+  +skillName
+  +personalContext
+  +educations
+  +projects
+  +interns
+  +awards
+}
+class Resume <<entity>> {
+  -resumeId
+  -userId
+  -title
+  -skillName
+  -personalContext
+  -status
+}
+class EducationInfo <<entity>>
+class ProjectInfo <<entity>>
+class InternInfo <<entity>>
+class AwardInfo <<entity>>
+class ResumeRepository <<repository>>
+class DetailInfoRepository <<repository>>
+ResumeController --> ResumeService
+ResumeService --> PdfTextExtractor
+ResumeService --> ResumeParseAgent
+ResumeParseAgent --> StandardResumeDTO
+ResumeService --> ResumeRepository
+ResumeService --> DetailInfoRepository
+Resume "1" *-- "0..*" EducationInfo
+Resume "1" *-- "0..*" ProjectInfo
+Resume "1" *-- "0..*" InternInfo
+Resume "1" *-- "0..*" AwardInfo
+@enduml

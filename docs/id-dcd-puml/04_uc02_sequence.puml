@@ -1,0 +1,36 @@
+
+@startuml
+skinparam shadowing false
+skinparam monochrome false
+skinparam defaultFontName Microsoft YaHei
+skinparam sequenceMessageAlign center
+title UC-02 Parse PDF Resume and Save Structured Resume - Sequence Diagram
+actor User
+boundary PdfUploadPage
+control ResumeController
+control ResumeService
+control PdfTextExtractor
+control ResumeParseAgent
+entity StandardResumeDTO
+database ResumeRepository
+database EducationInfoRepository
+database ProjectInfoRepository
+database InternInfoRepository
+database AwardInfoRepository
+
+User -> PdfUploadPage : uploadPDFResume(pdfFile)
+PdfUploadPage -> ResumeController : POST /resumes/upload-pdf
+ResumeController -> ResumeService : parseAndSave(userId,pdfFile)
+ResumeService -> PdfTextExtractor : extractText(pdfFile)
+PdfTextExtractor --> ResumeService : rawText
+ResumeService -> ResumeParseAgent : parse(rawText)
+ResumeParseAgent --> ResumeService : StandardResumeDTO
+ResumeService -> StandardResumeDTO : validateByPydantic()
+ResumeService -> ResumeRepository : save(resume)
+ResumeService -> EducationInfoRepository : saveAll(educations)
+ResumeService -> ProjectInfoRepository : saveAll(projects)
+ResumeService -> InternInfoRepository : saveAll(interns)
+ResumeService -> AwardInfoRepository : saveAll(awards)
+ResumeService --> ResumeController : resumeId + parsed preview
+ResumeController --> PdfUploadPage : parsed resume detail
+@enduml

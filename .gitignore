@@ -1,0 +1,54 @@
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Java / Maven / Gradle
+target/
+build/
+.gradle/
+*.class
+.mvn/timing.properties
+
+# Logs
+*.log
+logs/
+
+# Environment and local config
+.env
+.env.*
+!.env.example
+application-local.yml
+application-local.yaml
+application-dev.yml
+application-dev.yaml
+application-*.local.yml
+application-*.local.yaml
+
+# Frontend
+node_modules/
+dist/
+.vite/
+.next/
+coverage/
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+
+# Temporary files
+tmp/
+temp/
+.codex_extract/
+.paddlex_cache/
+
+# Runtime/user artifacts
+uploads/
+generated/
+.tmp_render/

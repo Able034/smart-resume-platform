@@ -1,0 +1,33 @@
+
+@startuml
+skinparam shadowing false
+skinparam monochrome false
+skinparam defaultFontName Microsoft YaHei
+skinparam sequenceMessageAlign center
+title UC-03 Check and Edit Resume Information - Sequence Diagram
+actor User
+boundary ResumeEditPage
+control ResumeController
+control ResumeService
+database ResumeRepository
+database DetailInfoRepository
+entity Resume
+
+User -> ResumeEditPage : selectResumeForCheck(resumeId)
+ResumeEditPage -> ResumeController : GET /resumes/{resumeId}
+ResumeController -> ResumeService : getResumeDetail(userId,resumeId)
+ResumeService -> ResumeRepository : findByIdAndUserId()
+ResumeRepository --> ResumeService : Resume
+ResumeService -> DetailInfoRepository : findDetailsByResumeId()
+DetailInfoRepository --> ResumeService : educations/projects/interns/awards
+ResumeService --> ResumeController : ResumeDetail
+ResumeController --> ResumeEditPage : detail
+
+User -> ResumeEditPage : saveCorrectedResume(resumeInfo)
+ResumeEditPage -> ResumeController : PUT /resumes/{resumeId}
+ResumeController -> ResumeService : updateResume(userId,resumeInfo)
+ResumeService -> ResumeRepository : update(resume)
+ResumeService -> DetailInfoRepository : update detail tables
+ResumeService --> ResumeController : saved
+ResumeController --> ResumeEditPage : success
+@enduml

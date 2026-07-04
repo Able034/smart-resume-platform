@@ -1,0 +1,2 @@
+ALTER TABLE `job`
+  MODIFY COLUMN `job_url` TEXT NOT NULL COMMENT '岗位 URL';

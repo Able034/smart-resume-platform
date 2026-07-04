@@ -1,0 +1,32 @@
+
+@startuml
+skinparam shadowing false
+skinparam monochrome false
+skinparam defaultFontName Microsoft YaHei
+skinparam sequenceMessageAlign center
+title UC-07 Manage User Accounts - Sequence Diagram
+actor Admin
+boundary AdminUserPage
+control AdminUserController
+control UserAccountService
+database UserAccountRepository
+entity UserAccount
+
+Admin -> AdminUserPage : selectUserManagement()
+AdminUserPage -> AdminUserController : GET /admin/users
+AdminUserController -> UserAccountService : listUsers(query)
+UserAccountService -> UserAccountRepository : search(query)
+UserAccountRepository --> UserAccountService : user list
+UserAccountService --> AdminUserController : page result
+AdminUserController --> AdminUserPage : user list
+
+Admin -> AdminUserPage : disableUser(userId)
+AdminUserPage -> AdminUserController : PATCH /admin/users/{userId}/disable
+AdminUserController -> UserAccountService : disableUser(adminId,userId)
+UserAccountService -> UserAccountRepository : findById(userId)
+UserAccountRepository --> UserAccountService : UserAccount
+UserAccountService -> UserAccount : changeStatus(DISABLED)
+UserAccountService -> UserAccountRepository : update(userAccount)
+UserAccountService --> AdminUserController : disabled
+AdminUserController --> AdminUserPage : success
+@enduml

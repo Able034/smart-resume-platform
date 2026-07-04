@@ -1,0 +1,22 @@
+
+@startuml
+skinparam shadowing false
+skinparam monochrome false
+skinparam defaultFontName Microsoft YaHei
+skinparam sequenceMessageAlign center
+title UC-07 Manage User Accounts - Collaboration Diagram
+object Admin
+object AdminUserPage
+object AdminUserController
+object UserAccountService
+object UserAccountRepository
+object UserAccount
+
+Admin --> AdminUserPage : 1. open/search users
+AdminUserPage --> AdminUserController : 2. request list or status change
+AdminUserController --> UserAccountService : 3. process admin operation
+UserAccountService --> UserAccountRepository : 4. query user account
+UserAccountService --> UserAccount : 5. change status
+UserAccountService --> UserAccountRepository : 6. update account
+UserAccountService --> AdminUserPage : 7. return result
+@enduml

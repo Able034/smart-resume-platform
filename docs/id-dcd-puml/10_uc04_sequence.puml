@@ -1,0 +1,37 @@
+
+@startuml
+skinparam shadowing false
+skinparam monochrome false
+skinparam defaultFontName Microsoft YaHei
+skinparam sequenceMessageAlign center
+title UC-04 Select LaTeX Template and Generate Resume Code - Sequence Diagram
+actor User
+boundary TemplatePage
+control TemplateController
+control LatexService
+control LatexTemplateAgent
+database ResumeRepository
+database ResumeTemplateRepository
+entity ResumeTemplate
+entity LatexCode
+
+User -> TemplatePage : queryResumeTemplates()
+TemplatePage -> TemplateController : GET /resume-templates
+TemplateController -> LatexService : listActiveTemplates()
+LatexService -> ResumeTemplateRepository : findActive()
+ResumeTemplateRepository --> LatexService : templates
+LatexService --> TemplateController : templates
+TemplateController --> TemplatePage : template list
+
+User -> TemplatePage : generateLatexResume(resumeId,templateId)
+TemplatePage -> TemplateController : POST /resumes/{resumeId}/generate-latex
+TemplateController -> LatexService : generateLatex(userId,resumeId,templateId)
+LatexService -> ResumeRepository : loadResumeDetail(resumeId)
+LatexService -> ResumeTemplateRepository : findActiveById(templateId)
+ResumeTemplateRepository --> LatexService : ResumeTemplate(latex path)
+LatexService -> ResumeTemplate : loadTemplateFile()
+LatexService -> LatexTemplateAgent : generateLatex(resume,templateFile)
+LatexTemplateAgent --> LatexService : LatexCode
+LatexService --> TemplateController : downloadUrl
+TemplateController --> TemplatePage : LaTeX download link
+@enduml

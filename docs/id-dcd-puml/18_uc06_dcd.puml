@@ -1,0 +1,46 @@
+
+@startuml
+skinparam shadowing false
+skinparam monochrome false
+skinparam defaultFontName Microsoft YaHei
+skinparam sequenceMessageAlign center
+title UC-06 Generate Resume Optimization Suggestions - DCD
+class OptController <<controller>> {
+  +optimize(resumeId,request)
+  +listOpts(resumeId)
+  +updateStatus(optId,status)
+}
+class OptService <<service>> {
+  +optimize(userId,resumeId,jobId)
+  +markStatus(userId,optId,status)
+}
+class ResumeOptimizeAgent <<agent>> {
+  +optimize(resume,job)
+  +checkNoFabrication(result)
+}
+class ResumeRepository <<repository>> {
+  +loadResumeDetail(resumeId)
+}
+class JobRepository <<repository>> {
+  +findById(jobId)
+}
+class OptRepository <<repository>> {
+  +save(opt)
+  +findByResumeId(resumeId)
+  +updateStatus(optId,status)
+}
+class Opt <<entity>> {
+  -optId
+  -resumeId
+  -jobId
+  -content
+  -score
+  -status
+}
+OptController --> OptService
+OptService --> ResumeRepository
+OptService --> JobRepository
+OptService --> ResumeOptimizeAgent
+OptService --> OptRepository
+OptRepository --> Opt
+@enduml

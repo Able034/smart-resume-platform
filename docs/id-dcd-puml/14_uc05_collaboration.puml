@@ -1,0 +1,27 @@
+
+@startuml
+skinparam shadowing false
+skinparam monochrome false
+skinparam defaultFontName Microsoft YaHei
+skinparam sequenceMessageAlign center
+title UC-05 Parse Job URL and Analyze Matching - Collaboration Diagram
+object User
+object JobPage
+object JobController
+object JobService
+object ResumeRepository
+object JobRepository
+object JobCrawler
+object JobAnalysisAgent
+object Job
+
+User --> JobPage : 1. input Boss job url
+JobPage --> JobController : 2. submitJobUrl()
+JobController --> JobService : 3. analyzeJob()
+JobService --> ResumeRepository : 4. load resume
+JobService --> JobRepository : 5. save job url
+JobService --> JobCrawler : 6. crawl content
+JobService --> JobAnalysisAgent : 7. analyze matching
+JobAnalysisAgent --> Job : 8. match result
+JobService --> JobRepository : 9. update job content/status
+@enduml

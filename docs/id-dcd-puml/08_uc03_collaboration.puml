@@ -1,0 +1,25 @@
+
+@startuml
+skinparam shadowing false
+skinparam monochrome false
+skinparam defaultFontName Microsoft YaHei
+skinparam sequenceMessageAlign center
+title UC-03 Check and Edit Resume Information - Collaboration Diagram
+object User
+object ResumeEditPage
+object ResumeController
+object ResumeService
+object ResumeRepository
+object DetailInfoRepository
+object ResumeDetail
+
+User --> ResumeEditPage : 1. open/check resume
+ResumeEditPage --> ResumeController : 2. request detail
+ResumeController --> ResumeService : 3. getResumeDetail()
+ResumeService --> ResumeRepository : 4. load resume
+ResumeService --> DetailInfoRepository : 5. load detail info
+ResumeService --> ResumeDetail : 6. assemble detail
+User --> ResumeEditPage : 7. save corrected info
+ResumeService --> ResumeRepository : 8. update resume
+ResumeService --> DetailInfoRepository : 9. update details
+@enduml

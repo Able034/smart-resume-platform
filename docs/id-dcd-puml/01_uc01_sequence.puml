@@ -1,0 +1,35 @@
+
+@startuml
+skinparam shadowing false
+skinparam monochrome false
+skinparam defaultFontName Microsoft YaHei
+skinparam sequenceMessageAlign center
+title UC-01 User Registration and Login - Sequence Diagram
+actor User
+boundary LoginPage
+control AuthController
+control AuthService
+database UserAccountRepository
+entity UserAccount
+
+User -> LoginPage : submitRegisterInfo(account,password,email)
+LoginPage -> AuthController : register(request)
+AuthController -> AuthService : register(account,password,email)
+AuthService -> UserAccountRepository : existsByAccountOrEmail()
+UserAccountRepository --> AuthService : false
+AuthService -> UserAccount : create(passwordHash,status=ACTIVE)
+AuthService -> UserAccountRepository : save(userAccount)
+UserAccountRepository --> AuthService : saved userId
+AuthService --> AuthController : register result
+AuthController --> LoginPage : success
+
+User -> LoginPage : submitLoginInfo(account,password)
+LoginPage -> AuthController : login(request)
+AuthController -> AuthService : login(account,password)
+AuthService -> UserAccountRepository : findByAccount(account)
+UserAccountRepository --> AuthService : UserAccount
+AuthService -> UserAccount : checkPassword(password)
+AuthService -> UserAccountRepository : updateLastLoginTime(userId)
+AuthService --> AuthController : token + user info
+AuthController --> LoginPage : login success
+@enduml

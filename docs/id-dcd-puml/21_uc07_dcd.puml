@@ -1,0 +1,36 @@
+
+@startuml
+skinparam shadowing false
+skinparam monochrome false
+skinparam defaultFontName Microsoft YaHei
+skinparam sequenceMessageAlign center
+title UC-07 Manage User Accounts - DCD
+class AdminUserController <<controller>> {
+  +listUsers(query)
+  +disableUser(userId)
+  +enableUser(userId)
+}
+class UserAccountService <<service>> {
+  +listUsers(query)
+  +disableUser(adminId,userId)
+  +enableUser(adminId,userId)
+  +checkAdmin(adminId)
+}
+class UserAccountRepository <<repository>> {
+  +search(query)
+  +findById(userId)
+  +update(userAccount)
+}
+class UserAccount <<entity>> {
+  -id
+  -account
+  -email
+  -role
+  -status
+  -registerTime
+  +changeStatus(status)
+}
+AdminUserController --> UserAccountService
+UserAccountService --> UserAccountRepository
+UserAccountRepository --> UserAccount
+@enduml

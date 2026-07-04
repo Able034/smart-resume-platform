@@ -1,0 +1,46 @@
+
+@startuml
+skinparam shadowing false
+skinparam monochrome false
+skinparam defaultFontName Microsoft YaHei
+skinparam sequenceMessageAlign center
+title UC-05 Parse Job URL and Analyze Matching - DCD
+class JobController <<controller>> {
+  +analyzeJob(resumeId,request)
+  +listJobs(resumeId)
+  +getJob(jobId)
+}
+class JobService <<service>> {
+  +analyzeJob(userId,resumeId,jobUrl)
+  +buildJobContent(crawlResult,analysis)
+}
+class JobCrawler <<service>> {
+  +crawl(jobUrl)
+}
+class JobAnalysisAgent <<agent>> {
+  +analyzeFit(resume,jobContent)
+}
+class ResumeRepository <<repository>> {
+  +loadResumeDetail(resumeId)
+}
+class JobRepository <<repository>> {
+  +save(job)
+  +update(job)
+  +findByResumeId(resumeId)
+}
+class Job <<entity>> {
+  -jobId
+  -resumeId
+  -jobUrl
+  -jobName
+  -company
+  -content
+  -status
+}
+JobController --> JobService
+JobService --> ResumeRepository
+JobService --> JobRepository
+JobService --> JobCrawler
+JobService --> JobAnalysisAgent
+JobRepository --> Job
+@enduml

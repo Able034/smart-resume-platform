@@ -1,0 +1,27 @@
+
+@startuml
+skinparam shadowing false
+skinparam monochrome false
+skinparam defaultFontName Microsoft YaHei
+skinparam sequenceMessageAlign center
+title UC-02 Parse PDF Resume and Save Structured Resume - Collaboration Diagram
+object User
+object PdfUploadPage
+object ResumeController
+object ResumeService
+object PdfTextExtractor
+object ResumeParseAgent
+object StandardResumeDTO
+object ResumeRepository
+object DetailRepositories
+
+User --> PdfUploadPage : 1. upload pdf
+PdfUploadPage --> ResumeController : 2. uploadPDFResume(pdfFile)
+ResumeController --> ResumeService : 3. parseAndSave()
+ResumeService --> PdfTextExtractor : 4. extract text
+ResumeService --> ResumeParseAgent : 5. parse rawText
+ResumeParseAgent --> StandardResumeDTO : 6. output pydantic object
+ResumeService --> ResumeRepository : 7. save resume
+ResumeService --> DetailRepositories : 8. save education/project/intern/award
+ResumeService --> PdfUploadPage : 9. return preview
+@enduml

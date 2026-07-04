@@ -1,0 +1,40 @@
+
+@startuml
+skinparam shadowing false
+skinparam monochrome false
+skinparam defaultFontName Microsoft YaHei
+skinparam sequenceMessageAlign center
+title UC-03 Check and Edit Resume Information - DCD
+class ResumeController <<controller>> {
+  +getResume(resumeId)
+  +updateResume(resumeId,request)
+  +deleteResume(resumeId)
+}
+class ResumeService <<service>> {
+  +getResumeDetail(userId,resumeId)
+  +updateResume(userId,request)
+  +validateOwner(userId,resumeId)
+}
+class ResumeRepository <<repository>> {
+  +findByIdAndUserId(resumeId,userId)
+  +update(resume)
+}
+class DetailInfoRepository <<repository>> {
+  +findByResumeId(resumeId)
+  +replaceDetails(resumeId,details)
+}
+class ResumeDetailDTO <<dto>>
+class Resume <<entity>>
+class EducationInfo <<entity>>
+class ProjectInfo <<entity>>
+class InternInfo <<entity>>
+class AwardInfo <<entity>>
+ResumeController --> ResumeService
+ResumeService --> ResumeRepository
+ResumeService --> DetailInfoRepository
+ResumeService --> ResumeDetailDTO
+Resume "1" *-- "0..*" EducationInfo
+Resume "1" *-- "0..*" ProjectInfo
+Resume "1" *-- "0..*" InternInfo
+Resume "1" *-- "0..*" AwardInfo
+@enduml

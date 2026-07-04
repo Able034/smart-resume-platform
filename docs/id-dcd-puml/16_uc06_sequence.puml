@@ -1,0 +1,33 @@
+
+@startuml
+skinparam shadowing false
+skinparam monochrome false
+skinparam defaultFontName Microsoft YaHei
+skinparam sequenceMessageAlign center
+title UC-06 Generate Resume Optimization Suggestions - Sequence Diagram
+actor User
+boundary OptimizePage
+control OptController
+control OptService
+control ResumeOptimizeAgent
+database ResumeRepository
+database JobRepository
+database OptRepository
+entity Opt
+
+User -> OptimizePage : requestResumeOptimization(resumeId,jobId)
+OptimizePage -> OptController : POST /resumes/{resumeId}/optimize
+OptController -> OptService : optimize(userId,resumeId,jobId)
+OptService -> ResumeRepository : loadResumeDetail(resumeId)
+alt jobId provided
+  OptService -> JobRepository : findById(jobId)
+  JobRepository --> OptService : Job content
+end
+OptService -> ResumeOptimizeAgent : optimize(resume,job)
+ResumeOptimizeAgent --> OptService : suggestions + score
+OptService -> ResumeOptimizeAgent : checkNoFabrication()
+OptService -> Opt : create(content,score,status=NEW)
+OptService -> OptRepository : save(opt)
+OptService --> OptController : opt result
+OptController --> OptimizePage : suggestions
+@enduml

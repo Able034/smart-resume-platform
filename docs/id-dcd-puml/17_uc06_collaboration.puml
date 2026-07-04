@@ -1,0 +1,27 @@
+
+@startuml
+skinparam shadowing false
+skinparam monochrome false
+skinparam defaultFontName Microsoft YaHei
+skinparam sequenceMessageAlign center
+title UC-06 Generate Resume Optimization Suggestions - Collaboration Diagram
+object User
+object OptimizePage
+object OptController
+object OptService
+object ResumeRepository
+object JobRepository
+object ResumeOptimizeAgent
+object OptRepository
+object Opt
+
+User --> OptimizePage : 1. request optimize
+OptimizePage --> OptController : 2. send resumeId/jobId
+OptController --> OptService : 3. optimize()
+OptService --> ResumeRepository : 4. load resume detail
+OptService --> JobRepository : 5. load optional job
+OptService --> ResumeOptimizeAgent : 6. check skills and STAR/STAT expression
+ResumeOptimizeAgent --> Opt : 7. create suggestion without fabrication
+OptService --> OptRepository : 8. save opt
+OptService --> OptimizePage : 9. return suggestions
+@enduml

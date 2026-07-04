@@ -1,0 +1,38 @@
+
+@startuml
+skinparam shadowing false
+skinparam monochrome false
+skinparam defaultFontName Microsoft YaHei
+skinparam sequenceMessageAlign center
+title UC-01 User Registration and Login - DCD
+class AuthController <<controller>> {
+  +register(request)
+  +login(request)
+  +me(token)
+}
+class AuthService <<service>> {
+  +register(account,password,email)
+  +login(account,password)
+  +hashPassword(password)
+  +verifyPassword(password,hash)
+}
+class UserAccountRepository <<repository>> {
+  +existsByAccountOrEmail(account,email)
+  +findByAccount(account)
+  +save(userAccount)
+  +updateLastLoginTime(userId)
+}
+class UserAccount <<entity>> {
+  -id
+  -account
+  -passwordHash
+  -email
+  -role
+  -status
+  +checkPassword(password)
+  +changeStatus(status)
+}
+AuthController --> AuthService
+AuthService --> UserAccountRepository
+AuthService --> UserAccount
+@enduml

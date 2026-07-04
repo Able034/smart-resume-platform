@@ -1,0 +1,21 @@
+
+@startuml
+skinparam shadowing false
+skinparam monochrome false
+skinparam defaultFontName Microsoft YaHei
+skinparam sequenceMessageAlign center
+title UC-01 User Registration and Login - Collaboration Diagram
+object User
+object LoginPage
+object AuthController
+object AuthService
+object UserAccountRepository
+object UserAccount
+
+User --> LoginPage : 1. submit register/login
+LoginPage --> AuthController : 2. send request
+AuthController --> AuthService : 3. validate and process
+AuthService --> UserAccountRepository : 4. query/save user
+AuthService --> UserAccount : 5. check password/create account
+AuthService --> LoginPage : 6. return token or result
+@enduml

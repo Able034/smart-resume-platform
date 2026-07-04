@@ -1,0 +1,48 @@
+
+@startuml
+skinparam shadowing false
+skinparam monochrome false
+skinparam defaultFontName Microsoft YaHei
+skinparam sequenceMessageAlign center
+title UC-04 Select LaTeX Template and Generate Resume Code - DCD
+class TemplateController <<controller>> {
+  +listTemplates()
+  +generateLatex(resumeId,request)
+  +downloadLatex(resumeId)
+}
+class LatexService <<service>> {
+  +listActiveTemplates()
+  +generateLatex(userId,resumeId,templateId)
+  +createDownloadLink(code)
+}
+class LatexTemplateAgent <<agent>> {
+  +generateLatex(resume,templateFile)
+}
+class ResumeRepository <<repository>> {
+  +loadResumeDetail(resumeId)
+  +updateTemplateId(resumeId,templateId)
+}
+class ResumeTemplateRepository <<repository>> {
+  +findActive()
+  +findActiveById(templateId)
+}
+class ResumeTemplate <<entity>> {
+  -resumeTemplateId
+  -templateName
+  -latex
+  -previewUrl
+  -status
+  +loadTemplateFile()
+}
+class LatexCode <<value object>> {
+  +fileName
+  +downloadUrl
+  +code
+}
+TemplateController --> LatexService
+LatexService --> ResumeRepository
+LatexService --> ResumeTemplateRepository
+LatexService --> LatexTemplateAgent
+LatexTemplateAgent --> LatexCode
+ResumeTemplateRepository --> ResumeTemplate
+@enduml

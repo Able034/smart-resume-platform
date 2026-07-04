@@ -1,0 +1,27 @@
+
+@startuml
+skinparam shadowing false
+skinparam monochrome false
+skinparam defaultFontName Microsoft YaHei
+skinparam sequenceMessageAlign center
+title UC-04 Select LaTeX Template and Generate Resume Code - Collaboration Diagram
+object User
+object TemplatePage
+object TemplateController
+object LatexService
+object ResumeRepository
+object ResumeTemplateRepository
+object ResumeTemplate
+object LatexTemplateAgent
+object LatexCode
+
+User --> TemplatePage : 1. choose template
+TemplatePage --> TemplateController : 2. query/generate
+TemplateController --> LatexService : 3. generateLatex()
+LatexService --> ResumeRepository : 4. load resume detail
+LatexService --> ResumeTemplateRepository : 5. load template record
+LatexService --> ResumeTemplate : 6. read latex file
+LatexService --> LatexTemplateAgent : 7. generate code
+LatexTemplateAgent --> LatexCode : 8. output latex code
+LatexService --> TemplatePage : 9. return download link
+@enduml

@@ -1,453 +1,314 @@
 # System Operation Contracts
 
-This document defines the system operation contracts for all system operations shown in the System Sequence Diagrams.
+本文档定义系统顺序图中出现的系统操作契约。当前版本以精简数据库设计为准，只描述第一版核心闭环需要的持久化对象。
 
-## UC-01 User Registration and Login
+## UC-01 用户注册与登录
 
 ### SOC-01 requestRegister()
 
 **Operation:** `requestRegister()`
 
-**Cross References:** Use Case UC-01 User Registration and Login; SSD UC-01; Domain Model classes `UserAccount`, `LoginSession`.
+**Cross References:** UC-01 用户注册与登录；领域模型类 `UserAccount`。
 
 **Preconditions:**
-- The system is running and available.
-- The visitor has not yet started the registration form flow.
+
+- 系统正常运行。
+- 访客尚未提交注册信息。
 
 **Postconditions:**
-- The registration form was displayed.
-- No `UserAccount` object was created.
-- No persistent system data was changed.
+
+- 系统展示注册表单。
+- 没有创建新的 `UserAccount`。
 
 ### SOC-02 submitRegisterInfo(account, password, email)
 
 **Operation:** `submitRegisterInfo(account, password, email)`
 
-**Cross References:** Use Case UC-01 User Registration and Login; SSD UC-01; Domain Model class `UserAccount`.
+**Cross References:** UC-01 用户注册与登录；领域模型类 `UserAccount`。
 
 **Preconditions:**
-- The registration form is displayed.
-- The submitted account, password, and email are present and syntactically valid.
-- No active `UserAccount` with the same account already exists.
+
+- 注册表单已展示。
+- 账号、密码、邮箱均已填写并通过基本格式校验。
+- 系统中不存在相同 `account` 或 `email` 的有效用户。
 
 **Postconditions:**
-- The submitted registration data was validated.
-- A new `UserAccount` was created.
-- The password was stored in a protected form.
-- The `UserAccount` status was set to active.
-- A registration success result was returned.
+
+- 创建新的 `UserAccount`。
+- 密码以 `password_hash` 形式保存。
+- 用户状态设置为 `ACTIVE`。
+- 返回注册成功结果。
 
 ### SOC-03 submitLoginInfo(account, password)
 
 **Operation:** `submitLoginInfo(account, password)`
 
-**Cross References:** Use Case UC-01 User Registration and Login; SSD UC-01; Domain Model classes `UserAccount`, `LoginSession`.
+**Cross References:** UC-01 用户注册与登录；领域模型类 `UserAccount`。
 
 **Preconditions:**
-- The login form is available.
-- The submitted account and password are present.
-- A matching active `UserAccount` exists.
+
+- 登录表单已展示。
+- 用户提交了账号和密码。
+- 系统中存在匹配的有效用户账号。
 
 **Postconditions:**
-- The submitted credentials were verified.
-- A new `LoginSession` was created.
-- The `LoginSession` was associated with the authenticated `UserAccount`.
-- The session expiration time was set.
-- A login success result was returned.
 
-## UC-02 Create Resume
+- 系统校验密码。
+- 更新 `last_login_time`。
+- 返回登录凭证和当前用户信息。
 
-### SOC-04 chooseCreateResume()
+## UC-02 PDF 简历解析入库
 
-**Operation:** `chooseCreateResume()`
+### SOC-04 chooseUploadPDFResume()
 
-**Cross References:** Use Case UC-02 Create Resume; SSD UC-02; Domain Model classes `UserAccount`, `Resume`, `ResumeSection`, `ResumeVersion`.
+**Operation:** `chooseUploadPDFResume()`
+
+**Cross References:** UC-02 PDF 简历解析入库；领域模型类 `Resume`、`ResumeParseAgent`。
 
 **Preconditions:**
-- The user is logged in.
-- The user's `UserAccount` is active.
+
+- 用户已登录。
+- 用户账号状态为 `ACTIVE`。
 
 **Postconditions:**
-- The resume input form was displayed.
-- No `Resume` object was created.
-- No persistent resume data was changed.
 
-### SOC-05 fillResumeInfo(info)
+- 系统展示 PDF 上传入口。
+- 没有创建简历数据。
 
-**Operation:** `fillResumeInfo(info)`
-
-**Cross References:** Use Case UC-02 Create Resume; SSD UC-02; Domain Model classes `Resume`, `ResumeSection`.
-
-**Preconditions:**
-- The user is logged in.
-- The resume input form is displayed.
-- The resume information is provided by the user.
-
-**Postconditions:**
-- The entered resume information was accepted by the system.
-- The entered content was organized as draft resume section data.
-- No final `Resume` record was created.
-
-### SOC-06 saveResume()
-
-**Operation:** `saveResume()`
-
-**Cross References:** Use Case UC-02 Create Resume; SSD UC-02; Domain Model classes `UserAccount`, `Resume`, `ResumeSection`, `ResumeVersion`.
-
-**Preconditions:**
-- The user is logged in.
-- Draft resume information exists.
-- Required fields and format rules are satisfied.
-
-**Postconditions:**
-- A new `Resume` was created.
-- The `Resume` was associated with the logged-in `UserAccount`.
-- One or more `ResumeSection` records were created.
-- An initial `ResumeVersion` was created.
-- The `Resume` status was set to saved.
-- The new `resumeId` was returned.
-
-## UC-03 Convert PDF Resume to Online Resume
-
-### SOC-07 uploadPDFResume(pdfFile)
+### SOC-05 uploadPDFResume(pdfFile)
 
 **Operation:** `uploadPDFResume(pdfFile)`
 
-**Cross References:** Use Case UC-03 Convert PDF Resume to Online Resume; SSD UC-03; Domain Model classes `UserAccount`, `PdfFile`, `Resume`, `ResumeSection`.
+**Cross References:** UC-02 PDF 简历解析入库；领域模型类 `PdfText`、`ResumeParseAgent`、`StandardResume`、`Resume`、`EducationInfo`、`ProjectInfo`、`InternInfo`、`AwardInfo`。
 
 **Preconditions:**
-- The user is logged in.
-- A local PDF resume file is selected.
-- The selected file satisfies the configured upload size limit.
+
+- 用户已登录。
+- 用户选择了本地 PDF 文件。
+- 文件格式为 PDF，大小满足系统限制。
 
 **Postconditions:**
-- The uploaded file was validated as a PDF file.
-- A `PdfFile` record was stored.
-- The `PdfFile` was associated with the logged-in `UserAccount`.
-- Resume information was parsed from the PDF content.
-- A parsed resume preview was generated and displayed.
 
-### SOC-08 confirmParsedResume()
+- 系统校验 PDF 文件格式和大小。
+- 系统将 PDF 内容抽取为字符串文本。
+- `ResumeParseAgent` 根据字符串文本解析出标准简历对象。
+- 标准简历对象通过 Pydantic 校验。
+- 系统创建 `resume` 记录。
+- 系统按解析结果创建 `education_info`、`project_info`、`intern_info`、`award_info` 明细记录。
+- 简历状态设置为 `DRAFT` 或 `SAVED`。
+- 系统返回 `resumeId` 和解析结果预览，供用户校对。
 
-**Operation:** `confirmParsedResume()`
+## UC-03 用户校对与编辑简历
 
-**Cross References:** Use Case UC-03 Convert PDF Resume to Online Resume; SSD UC-03; Domain Model classes `PdfFile`, `ResumeSection`.
+### SOC-06 selectResumeForCheck(resumeId)
+
+**Operation:** `selectResumeForCheck(resumeId)`
+
+**Cross References:** UC-03 用户校对与编辑简历；领域模型类 `Resume`、`EducationInfo`、`ProjectInfo`、`InternInfo`、`AwardInfo`。
 
 **Preconditions:**
-- A parsed resume preview is available.
-- The user has reviewed the parsed resume information.
+
+- 用户已登录。
+- 目标简历存在。
+- 目标简历属于当前登录用户。
 
 **Postconditions:**
-- The parsed resume information was confirmed by the user.
-- The parsed section data was marked as ready for saving.
-- No final online `Resume` was created yet.
 
-### SOC-09 saveOnlineResume()
+- 系统读取 `resume` 主表信息。
+- 系统读取该简历关联的教育背景、项目经历、实习经历和获奖经历。
+- 系统展示可校对和编辑的简历详情。
 
-**Operation:** `saveOnlineResume()`
+### SOC-07 saveCorrectedResume(resumeInfo)
 
-**Cross References:** Use Case UC-03 Convert PDF Resume to Online Resume; SSD UC-03; Domain Model classes `UserAccount`, `PdfFile`, `Resume`, `ResumeSection`.
+**Operation:** `saveCorrectedResume(resumeInfo)`
+
+**Cross References:** UC-03 用户校对与编辑简历；领域模型类 `Resume`、`EducationInfo`、`ProjectInfo`、`InternInfo`、`AwardInfo`。
 
 **Preconditions:**
-- The user is logged in.
-- Confirmed parsed resume information exists.
-- Required resume fields are complete enough to be saved.
+
+- 用户已登录。
+- 目标简历属于当前登录用户。
+- 用户提交了校对后的简历信息。
+- 必填字段和字段格式满足系统规则。
 
 **Postconditions:**
-- A new online `Resume` was created from the parsed PDF data.
-- The `Resume` was associated with the logged-in `UserAccount`.
-- The `Resume` was associated with the uploaded `PdfFile`.
-- One or more `ResumeSection` records were created from the parsed content.
-- The online resume was saved.
-- The new `resumeId` was returned.
 
-## UC-04 Edit Resume
+- 系统更新 `resume` 主表信息。
+- 系统更新对应的 `education_info`、`project_info`、`intern_info`、`award_info` 记录。
+- 简历状态更新为 `SAVED`。
+- `updated_at` 被刷新。
+- 返回保存成功结果。
 
-### SOC-10 selectResumeForEditing(resumeId)
+## UC-04 选择模板并生成 LaTeX 简历
 
-**Operation:** `selectResumeForEditing(resumeId)`
+### SOC-08 queryResumeTemplates()
 
-**Cross References:** Use Case UC-04 Edit Resume; SSD UC-04; Domain Model classes `UserAccount`, `Resume`, `ResumeSection`, `ResumeVersion`.
+**Operation:** `queryResumeTemplates()`
+
+**Cross References:** UC-04 选择模板并生成 LaTeX 简历；领域模型类 `ResumeTemplate`。
 
 **Preconditions:**
-- The user is logged in.
-- The target `Resume` exists.
-- The target `Resume` belongs to the logged-in `UserAccount`.
+
+- 用户已登录。
 
 **Postconditions:**
-- The current `Resume` content was loaded.
-- The related `ResumeSection` records were retrieved.
-- The resume editing view was displayed.
-- No resume data was changed.
 
-### SOC-11 modifyResumeContent(resumeInfo)
+- 系统查询状态为 `ACTIVE` 的 `resume_template` 记录。
+- 返回模板名称、预览图和模板 ID。
 
-**Operation:** `modifyResumeContent(resumeInfo)`
+### SOC-09 generateLatexResume(resumeId, templateId)
 
-**Cross References:** Use Case UC-04 Edit Resume; SSD UC-04; Domain Model classes `Resume`, `ResumeSection`.
+**Operation:** `generateLatexResume(resumeId, templateId)`
+
+**Cross References:** UC-04 选择模板并生成 LaTeX 简历；领域模型类 `Resume`、`ResumeTemplate`、`LatexTemplateAgent`。
 
 **Preconditions:**
-- The user is logged in.
-- The target `Resume` is loaded for editing.
-- The edited resume information is provided.
+
+- 用户已登录。
+- 目标简历存在且属于当前用户。
+- 目标模板存在且状态为 `ACTIVE`。
+- 简历信息已经校对并保存。
 
 **Postconditions:**
-- The edited resume information was accepted by the system.
-- The changed section data was recorded as an edit draft.
-- No new `ResumeVersion` was created yet.
 
-### SOC-12 saveEditedResume()
+- 系统更新 `resume.resume_template_id`。
+- 系统读取简历主表和关联经历明细。
+- 系统读取 `resume_template.latex` 指向的 LaTeX 模板文件。
+- `LatexTemplateAgent` 根据简历信息和模板文件生成最终 LaTeX 代码。
+- 系统生成 LaTeX 代码下载链接。
+- 返回下载链接和必要的生成提示。
 
-**Operation:** `saveEditedResume()`
+## UC-05 岗位 URL 解析与匹配分析
 
-**Cross References:** Use Case UC-04 Edit Resume; SSD UC-04; Domain Model classes `Resume`, `ResumeSection`, `ResumeVersion`.
+### SOC-10 submitJobUrl(resumeId, jobUrl)
+
+**Operation:** `submitJobUrl(resumeId, jobUrl)`
+
+**Cross References:** UC-05 岗位 URL 解析与匹配分析；领域模型类 `Resume`、`Job`、`JobCrawler`、`JobAnalysisAgent`。
 
 **Preconditions:**
-- The user is logged in.
-- An edit draft exists for the target `Resume`.
-- The edited content satisfies the resume validation rules.
+
+- 用户已登录。
+- 目标简历存在且属于当前用户。
+- 用户输入 Boss 直聘等招聘网站岗位 URL。
 
 **Postconditions:**
-- The target `Resume` was updated.
-- The affected `ResumeSection` records were updated.
-- A new `ResumeVersion` was created.
-- The resume update time was refreshed.
-- The new `versionId` was returned.
 
-## UC-05 Resume Optimization
+- 系统创建或更新 `job` 记录，保存 `resume_id` 和 `job_url`。
+- `JobCrawler` 抓取岗位页面正文。
+- 系统把岗位正文、岗位名称、公司名称等内容写入 `job.content`、`job.job_name`、`job.company`。
+- `JobAnalysisAgent` 读取简历信息和岗位正文。
+- Agent 输出岗位是否合适、匹配度、置信来源等分析结果。
+- 系统将分析结果合并保存到 `job.content`。
+- `job.status` 更新为 `PARSED`；失败时更新为 `FAILED` 并返回错误原因。
 
-### SOC-13 selectResumeForDiagnosis(resumeId)
+## UC-06 简历优化建议
 
-**Operation:** `selectResumeForDiagnosis(resumeId)`
+### SOC-11 requestResumeOptimization(resumeId, jobId)
 
-**Cross References:** Use Case UC-05 Resume Optimization; SSD UC-05; Domain Model classes `UserAccount`, `Resume`, `ResumeSection`, `OptimizationTask`.
+**Operation:** `requestResumeOptimization(resumeId, jobId)`
+
+**Cross References:** UC-06 简历优化建议；领域模型类 `Resume`、`Job`、`Opt`、`ResumeOptimizeAgent`。
 
 **Preconditions:**
-- The user is logged in.
-- The target `Resume` exists.
-- The target `Resume` belongs to the logged-in `UserAccount`.
+
+- 用户已登录。
+- 目标简历存在且属于当前用户。
+- 如果传入 `jobId`，目标岗位记录存在且关联当前简历。
+- 简历已有可分析内容。
 
 **Postconditions:**
-- The selected `Resume` was loaded for diagnosis.
-- The related `ResumeSection` records were collected.
-- The diagnosis context was prepared.
-- No diagnosis report was generated yet.
 
-### SOC-14 submitJobUrl()
+- 系统读取简历主表、教育背景、项目经历、实习经历、获奖经历。
+- 如果存在岗位上下文，系统读取 `job.content`。
+- `ResumeOptimizeAgent` 分析简历内容是否合理、技能是否足够、项目/实习经历是否使用 STAR/STAT 表达法则。
+- Agent 只能基于已有简历内容提出建议，不虚构项目、经历、数据或成果。
+- 系统创建 `opt` 记录，保存优化建议内容、评分和关联岗位 ID。
+- 返回优化建议和评分。
 
-**Operation:** `submitJobUrl()`
+### SOC-12 markOptimizationUsed(optId)
 
-**Cross References:** Use Case UC-05 Resume Optimization; SSD UC-05; Domain Model classes `JobUrl`, `JobDescription`, `JobRequirement`, `OptimizationTask`, `DiagnosisReport`, `OptimizationSuggestion`.
+**Operation:** `markOptimizationUsed(optId)`
+
+**Cross References:** UC-06 简历优化建议；领域模型类 `Opt`。
 
 **Preconditions:**
-- A resume has been selected for diagnosis.
-- A target job URL is provided by the user.
-- Optimization rules and job analysis services are available.
+
+- 用户已登录。
+- 目标优化记录存在。
+- 目标优化记录关联的简历属于当前用户。
 
 **Postconditions:**
-- A `JobUrl` was recorded.
-- A `JobDescription` was fetched and summarized from the target job URL.
-- One or more `JobRequirement` records were extracted.
-- An `OptimizationTask` was created.
-- The selected resume content was analyzed against the extracted job requirements.
-- A diagnosis report draft was generated.
-- One or more `OptimizationSuggestion` records were generated.
-- The optimization report and suggestions were displayed.
 
-### SOC-15 saveOptimizationReport(reportId)
+- `opt.status` 更新为 `USED`。
+- 返回更新成功结果。
 
-**Operation:** `saveOptimizationReport(reportId)`
+## UC-07 管理用户账号
 
-**Cross References:** Use Case UC-05 Resume Optimization; SSD UC-05; Domain Model classes `OptimizationTask`, `DiagnosisReport`, `OptimizationSuggestion`.
-
-**Preconditions:**
-- The user is logged in.
-- A generated diagnosis report is available.
-- The report belongs to the selected resume and the logged-in user.
-
-**Postconditions:**
-- The `DiagnosisReport` was saved.
-- The `DiagnosisReport` was linked to the corresponding `OptimizationTask`.
-- The `DiagnosisReport` was linked to the selected `Resume`.
-- The related `OptimizationSuggestion` records were saved.
-- The saved `reportId` was returned.
-
-## UC-06 Export Resume
-
-### SOC-16 selectResumeForExport(resumeId)
-
-**Operation:** `selectResumeForExport(resumeId)`
-
-**Cross References:** Use Case UC-06 Export Resume; SSD UC-06; Domain Model classes `UserAccount`, `Resume`, `ResumeSection`, `ResumeTemplate`, `ExportFile`.
-
-**Preconditions:**
-- The user is logged in.
-- The target `Resume` exists.
-- The target `Resume` belongs to the logged-in `UserAccount`.
-- The resume content is complete enough to be exported.
-- A usable `ResumeTemplate` is available.
-
-**Postconditions:**
-- The selected `Resume` was checked for exportability.
-- The related `ResumeSection` data was assembled.
-- The available export format options were displayed.
-- The selected or default `ResumeTemplate` was applied.
-- An `ExportFile` was generated.
-- A download URL was created.
-- The exported resume file link was returned.
-
-## UC-07 Resume Version Management
-
-### SOC-17 selectResumeVersionManagement(resumeId)
-
-**Operation:** `selectResumeVersionManagement(resumeId)`
-
-**Cross References:** Use Case UC-07 Resume Version Management; SSD UC-07; Domain Model classes `UserAccount`, `Resume`, `ResumeVersion`, `VersionSection`.
-
-**Preconditions:**
-- The user is logged in.
-- The target `Resume` exists.
-- The target `Resume` belongs to the logged-in `UserAccount`.
-- At least one `ResumeVersion` exists for the target `Resume`.
-
-**Postconditions:**
-- The target `Resume` was loaded.
-- The related `ResumeVersion` list was retrieved.
-- Version summary data was displayed.
-- No current resume content was changed.
-
-### SOC-18 selectHistoryVersion(versionId)
-
-**Operation:** `selectHistoryVersion(versionId)`
-
-**Cross References:** Use Case UC-07 Resume Version Management; SSD UC-07; Domain Model classes `ResumeVersion`, `VersionSection`.
-
-**Preconditions:**
-- The resume version management view is displayed.
-- The selected `ResumeVersion` exists.
-- The selected `ResumeVersion` belongs to the current `Resume`.
-
-**Postconditions:**
-- The selected `ResumeVersion` was loaded.
-- The related `VersionSection` records were retrieved.
-- The historical version content was displayed.
-- No current resume content was changed.
-
-## UC-08 Manage User Accounts
-
-### SOC-19 selectUserManagement()
+### SOC-13 selectUserManagement()
 
 **Operation:** `selectUserManagement()`
 
-**Cross References:** Use Case UC-08 Manage User Accounts; SSD UC-08; Domain Model classes `Admin`, `UserAccount`.
+**Cross References:** UC-07 管理用户账号；领域模型类 `Admin`、`UserAccount`。
 
 **Preconditions:**
-- The administrator is logged in.
-- The administrator account is active.
-- The administrator has user management permission.
+
+- 管理员已登录。
+- 管理员账号状态为 `ACTIVE`。
+- 当前账号角色为 `ADMIN`。
 
 **Postconditions:**
-- The user management view was displayed.
-- The `UserAccount` list was retrieved.
-- No user account status was changed.
 
-### SOC-20 searchUser(queryCondition)
+- 系统展示用户管理页面。
+- 系统读取 `user_account` 列表。
+
+### SOC-14 searchUser(queryCondition)
 
 **Operation:** `searchUser(queryCondition)`
 
-**Cross References:** Use Case UC-08 Manage User Accounts; SSD UC-08; Domain Model classes `Admin`, `UserAccount`.
+**Cross References:** UC-07 管理用户账号；领域模型类 `Admin`、`UserAccount`。
 
 **Preconditions:**
-- The administrator is logged in.
-- The user management view is displayed.
-- A query condition is provided or the default query condition is available.
+
+- 管理员已登录。
+- 用户管理页面已打开。
 
 **Postconditions:**
-- Matching `UserAccount` records were retrieved.
-- The user search result was displayed.
-- No user account data was changed.
 
-### SOC-21 disableUser(userId)
+- 系统按账号、邮箱或状态查询 `user_account`。
+- 返回符合条件的用户列表。
+
+### SOC-15 disableUser(userId)
 
 **Operation:** `disableUser(userId)`
 
-**Cross References:** Use Case UC-08 Manage User Accounts; SSD UC-08; Domain Model classes `Admin`, `UserAccount`.
+**Cross References:** UC-07 管理用户账号；领域模型类 `Admin`、`UserAccount`。
 
 **Preconditions:**
-- The administrator is logged in.
-- The administrator has user disable permission.
-- The target `UserAccount` exists.
-- The target `UserAccount` is not already disabled.
+
+- 管理员已登录。
+- 目标用户存在。
+- 目标用户状态不是 `DISABLED`。
 
 **Postconditions:**
-- The target `UserAccount` was selected for disabling.
-- A disable confirmation request was displayed.
-- No user account status was changed yet.
 
-### SOC-22 confirmDisable()
+- 系统将目标 `UserAccount.status` 更新为 `DISABLED`。
+- 被禁用用户无法继续登录。
+- 返回禁用成功结果。
 
-**Operation:** `confirmDisable()`
+### SOC-16 enableUser(userId)
 
-**Cross References:** Use Case UC-08 Manage User Accounts; SSD UC-08; Domain Model classes `Admin`, `UserAccount`.
+**Operation:** `enableUser(userId)`
+
+**Cross References:** UC-07 管理用户账号；领域模型类 `Admin`、`UserAccount`。
 
 **Preconditions:**
-- The administrator is logged in.
-- A disable confirmation request is displayed.
-- A target `UserAccount` has been selected for disabling.
+
+- 管理员已登录。
+- 目标用户存在。
+- 目标用户状态为 `DISABLED`。
 
 **Postconditions:**
-- The target `UserAccount` status was changed to disabled.
-- The account status change was persisted.
-- Future login by the disabled `UserAccount` was prevented.
-- A disable success result was displayed.
 
-## UC-09 View System Logs
-
-### SOC-23 selectSystemLog()
-
-**Operation:** `selectSystemLog()`
-
-**Cross References:** Use Case UC-09 View System Logs; SSD UC-09; Domain Model classes `Admin`, `SystemLog`.
-
-**Preconditions:**
-- The administrator is logged in.
-- The administrator account is active.
-- The administrator has log viewing permission.
-
-**Postconditions:**
-- The system log view was displayed.
-- The `SystemLog` list was retrieved.
-- System log summary records were displayed.
-- No persistent log data was changed.
-
-### SOC-24 filterLogs(filterCondition)
-
-**Operation:** `filterLogs(filterCondition)`
-
-**Cross References:** Use Case UC-09 View System Logs; SSD UC-09; Domain Model classes `Admin`, `SystemLog`.
-
-**Preconditions:**
-- The administrator is logged in.
-- The system log view is displayed.
-- A filter condition is provided.
-
-**Postconditions:**
-- Matching `SystemLog` records were retrieved.
-- The filtered log list was displayed.
-- No persistent log data was changed.
-
-### SOC-25 selectLogDetail(logId)
-
-**Operation:** `selectLogDetail(logId)`
-
-**Cross References:** Use Case UC-09 View System Logs; SSD UC-09; Domain Model classes `Admin`, `SystemLog`.
-
-**Preconditions:**
-- The administrator is logged in.
-- The selected `SystemLog` exists.
-- The administrator has permission to view the selected log detail.
-
-**Postconditions:**
-- The selected `SystemLog` detail was retrieved.
-- The log detail was displayed.
-- No persistent log data was changed.
+- 系统将目标 `UserAccount.status` 更新为 `ACTIVE`。
+- 返回启用成功结果。
