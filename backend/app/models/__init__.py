@@ -7,6 +7,7 @@ from app.models.entities import (
     ProjectInfo,
     Resume,
     ResumeTemplate,
+    SystemLog,
     UserAccount,
 )
 
@@ -19,5 +20,6 @@ __all__ = [
     "ProjectInfo",
     "Resume",
     "ResumeTemplate",
+    "SystemLog",
     "UserAccount",
 ]

@@ -1,4 +1,6 @@
 import type {
+  AdminLogItem,
+  AdminUserItem,
   ApiResponse,
   ApplyOptimizationResponse,
   JobAnalyzeResponse,
@@ -103,6 +105,12 @@ export const api = {
     })
   },
 
+  deleteResume(resumeId: number) {
+    return request<boolean>(`/resumes/${resumeId}`, {
+      method: 'DELETE',
+    })
+  },
+
   listTemplates() {
     return request<TemplateItem[]>('/resume-templates')
   },
@@ -166,6 +174,56 @@ export const api = {
     return request<ApplyOptimizationResponse>(`/opts/${optId}/apply`, {
       method: 'POST',
       body: JSON.stringify(payload),
+    })
+  },
+
+  listAdminUsers(params: {
+    keyword?: string | null
+    status?: string | null
+    page?: number
+    pageSize?: number
+  } = {}) {
+    const search = new URLSearchParams()
+    search.set('page', String(params.page ?? 1))
+    search.set('pageSize', String(params.pageSize ?? 20))
+    if (params.keyword) search.set('keyword', params.keyword)
+    if (params.status) search.set('status', params.status)
+    return request<PageData<AdminUserItem>>(`/admin/users?${search.toString()}`)
+  },
+
+  disableAdminUser(userId: number) {
+    return request<AdminUserItem>(`/admin/users/${userId}/disable`, {
+      method: 'PATCH',
+    })
+  },
+
+  enableAdminUser(userId: number) {
+    return request<AdminUserItem>(`/admin/users/${userId}/enable`, {
+      method: 'PATCH',
+    })
+  },
+
+  listAdminLogs(params: {
+    keyword?: string | null
+    action?: string | null
+    page?: number
+    pageSize?: number
+  } = {}) {
+    const search = new URLSearchParams()
+    search.set('page', String(params.page ?? 1))
+    search.set('pageSize', String(params.pageSize ?? 20))
+    if (params.keyword) search.set('keyword', params.keyword)
+    if (params.action) search.set('action', params.action)
+    return request<PageData<AdminLogItem>>(`/admin/logs?${search.toString()}`)
+  },
+
+  uploadTemplate(templateName: string, file: File) {
+    const form = new FormData()
+    form.append('templateName', templateName)
+    form.append('file', file)
+    return request<TemplateItem>('/admin/resume-templates/upload', {
+      method: 'POST',
+      body: form,
     })
   },
 }

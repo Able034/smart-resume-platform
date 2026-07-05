@@ -12,6 +12,7 @@ USE smart_resume_platform;
 
 DROP TABLE IF EXISTS `opt`;
 DROP TABLE IF EXISTS `job`;
+DROP TABLE IF EXISTS `system_log`;
 DROP TABLE IF EXISTS `award_info`;
 DROP TABLE IF EXISTS `intern_info`;
 DROP TABLE IF EXISTS `project_info`;
@@ -141,6 +142,21 @@ CREATE TABLE `job` (
   KEY `idx_job_status` (`status`),
   KEY `idx_job_created_at` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='岗位解析与匹配分析表';
+
+CREATE TABLE `system_log` (
+  `log_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '日志 ID',
+  `user_id` BIGINT UNSIGNED NULL COMMENT '操作用户 ID',
+  `action` VARCHAR(80) NOT NULL COMMENT '操作类型',
+  `target_type` VARCHAR(80) NULL COMMENT '操作对象类型',
+  `target_id` VARCHAR(80) NULL COMMENT '操作对象 ID',
+  `detail` TEXT NULL COMMENT '日志详情',
+  `ip` VARCHAR(80) NULL COMMENT '客户端 IP',
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`log_id`),
+  KEY `idx_system_log_user_id` (`user_id`),
+  KEY `idx_system_log_action` (`action`),
+  KEY `idx_system_log_created_at` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='系统操作日志表';
 
 CREATE TABLE `opt` (
   `opt_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '优化 ID',

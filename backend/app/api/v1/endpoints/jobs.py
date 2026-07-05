@@ -1,9 +1,11 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 
 from app.api.deps import CurrentUser, DbSession
+from app.api.request_utils import client_ip
 from app.schemas.common import success
 from app.schemas.job import JobAnalyzeRequest
 from app.services.job_service import JobService
+from app.services.log_service import LogService
 
 router = APIRouter()
 
@@ -12,17 +14,25 @@ router = APIRouter()
 def analyze_job(
     resume_id: int,
     payload: JobAnalyzeRequest,
+    request: Request,
     current_user: CurrentUser,
     db: DbSession,
 ):
-    return success(
-        JobService(db).analyze(
-            resume_id,
-            current_user.id,
-            payload.job_url,
-            payload.job_description,
-        )
+    result = JobService(db).analyze(
+        resume_id,
+        current_user.id,
+        payload.job_url,
+        payload.job_description,
     )
+    LogService(db).record(
+        user_id=current_user.id,
+        action="ANALYZE_JOB",
+        target_type="job",
+        target_id=result.job_id,
+        detail=f"用户 {current_user.account} 为简历 {resume_id} 分析岗位",
+        ip=client_ip(request),
+    )
+    return success(result)
 
 
 @router.get("/resumes/{resume_id}/jobs")

@@ -10,6 +10,21 @@ export interface User {
   email?: string | null
   role: string
   status: string
+  registerTime?: string | null
+  lastLoginTime?: string | null
+}
+
+export type AdminUserItem = User
+
+export interface AdminLogItem {
+  logId: number
+  userId?: number | null
+  action: string
+  targetType?: string | null
+  targetId?: string | null
+  detail?: string | null
+  ip?: string | null
+  createdAt?: string | null
 }
 
 export interface LoginResponse {

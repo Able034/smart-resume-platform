@@ -11,8 +11,12 @@ import {
   Plus,
   RefreshCw,
   Save,
+  Search,
+  ShieldCheck,
   Trash2,
   Upload,
+  UserCheck,
+  UserX,
   X,
   XCircle,
   UserPlus,
@@ -20,6 +24,8 @@ import {
 } from 'lucide-vue-next'
 import { api, clearToken, downloadWithToken, getToken, setToken } from './api'
 import type {
+  AdminLogItem,
+  AdminUserItem,
   Award,
   Education,
   Intern,
@@ -49,7 +55,10 @@ type ReviewBlock = {
   accepted: boolean
 }
 
+type AppView = 'workspace' | 'admin'
+
 const user = ref<User | null>(null)
+const activeView = ref<AppView>('workspace')
 const authMode = ref<'login' | 'register'>('login')
 const authForm = ref({ account: '', password: '', email: '' })
 const resumes = ref<ResumeListItem[]>([])
@@ -69,8 +78,23 @@ const message = ref('')
 const error = ref('')
 const reviewModalOpen = ref(false)
 const reviewBlocks = ref<ReviewBlock[]>([])
+const adminUsers = ref<AdminUserItem[]>([])
+const adminKeyword = ref('')
+const adminStatus = ref<'ALL' | 'ACTIVE' | 'DISABLED'>('ALL')
+const adminPage = ref(1)
+const adminPageSize = 20
+const adminTotal = ref(0)
+const adminLogs = ref<AdminLogItem[]>([])
+const logKeyword = ref('')
+const logAction = ref('ALL')
+const logPage = ref(1)
+const logPageSize = 20
+const logTotal = ref(0)
+const templateUploadName = ref('')
+const templateUploadFile = ref<File | null>(null)
 
 const isAuthed = computed(() => Boolean(user.value && getToken()))
+const isAdmin = computed(() => user.value?.role === 'ADMIN')
 const activeTemplate = computed(() =>
   templates.value.find((item) => item.resumeTemplateId === selectedTemplateId.value),
 )
@@ -78,6 +102,8 @@ const acceptedReviewCount = computed(() => reviewBlocks.value.filter((item) => i
 const selectedJobScore = computed(
   () => selectedJobAnalysis.value?.scoring?.globalScore ?? selectedJobAnalysis.value?.matchScore ?? null,
 )
+const adminTotalPages = computed(() => Math.max(1, Math.ceil(adminTotal.value / adminPageSize)))
+const logTotalPages = computed(() => Math.max(1, Math.ceil(logTotal.value / logPageSize)))
 
 watch(selectedJobId, async (jobId) => {
   if (!jobId) {
@@ -131,9 +157,12 @@ async function submitAuth() {
 function logout() {
   clearToken()
   user.value = null
+  activeView.value = 'workspace'
   resumes.value = []
   activeResume.value = null
   selectedOpt.value = null
+  adminUsers.value = []
+  adminLogs.value = []
 }
 
 async function loadWorkspace() {
@@ -146,6 +175,97 @@ async function loadWorkspace() {
   if (!activeResume.value && resumes.value.length) {
     await selectResume(resumes.value[0].resumeId)
   }
+}
+
+async function switchView(view: AppView) {
+  activeView.value = view
+  if (view === 'admin') {
+    await Promise.all([loadAdminUsers(1), loadAdminLogs(1)])
+  }
+}
+
+async function refreshCurrentView() {
+  if (activeView.value === 'admin') {
+    await Promise.all([loadAdminUsers(adminPage.value), loadAdminLogs(logPage.value)])
+    return
+  }
+  await loadWorkspace()
+}
+
+async function loadAdminUsers(page = adminPage.value) {
+  if (!isAdmin.value) return
+  await run(async () => {
+    adminPage.value = page
+    const result = await api.listAdminUsers({
+      keyword: adminKeyword.value.trim() || null,
+      status: adminStatus.value === 'ALL' ? null : adminStatus.value,
+      page,
+      pageSize: adminPageSize,
+    })
+    adminUsers.value = result.items
+    adminTotal.value = result.total
+  }, '用户列表已刷新')
+}
+
+async function updateAdminUserStatus(row: AdminUserItem, status: 'ACTIVE' | 'DISABLED') {
+  if (row.userId === user.value?.userId && status === 'DISABLED') {
+    error.value = '不能在当前会话中禁用自己'
+    return
+  }
+  await run(async () => {
+    const updated =
+      status === 'ACTIVE'
+        ? await api.enableAdminUser(row.userId)
+        : await api.disableAdminUser(row.userId)
+    row.status = updated.status
+    await loadAdminUsers(adminPage.value)
+  }, status === 'ACTIVE' ? '用户已启用' : '用户已禁用')
+}
+
+async function loadAdminLogs(page = logPage.value) {
+  if (!isAdmin.value) return
+  await run(async () => {
+    logPage.value = page
+    const result = await api.listAdminLogs({
+      keyword: logKeyword.value.trim() || null,
+      action: logAction.value === 'ALL' ? null : logAction.value,
+      page,
+      pageSize: logPageSize,
+    })
+    adminLogs.value = result.items
+    logTotal.value = result.total
+  }, '日志列表已刷新')
+}
+
+function onTemplateFileChange(event: Event) {
+  const target = event.target as HTMLInputElement
+  templateUploadFile.value = target.files?.[0] || null
+}
+
+async function uploadTemplate() {
+  if (!templateUploadName.value.trim()) {
+    error.value = '请输入模板名称'
+    return
+  }
+  if (!templateUploadFile.value) {
+    error.value = '请选择 .tex 或 .zip 模板文件'
+    return
+  }
+  await run(async () => {
+    const template = await api.uploadTemplate(templateUploadName.value.trim(), templateUploadFile.value as File)
+    templates.value = await api.listTemplates()
+    selectedTemplateId.value = template.resumeTemplateId
+    templateUploadName.value = ''
+    templateUploadFile.value = null
+    await loadAdminLogs(1)
+  }, '模板已上传')
+}
+
+function formatDateTime(value?: string | null) {
+  if (!value) return '-'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleString()
 }
 
 async function refreshResumes() {
@@ -161,6 +281,37 @@ async function selectResume(resumeId: number) {
     selectedOpt.value = null
     await loadResumeRelated(resumeId)
   })
+}
+
+async function deleteResume(resume: ResumeListItem) {
+  const displayTitle = resume.title || `#${resume.resumeId}`
+  if (!window.confirm(`确定删除简历「${displayTitle}」吗？删除后不会在列表中显示。`)) {
+    return
+  }
+
+  await run(async () => {
+    const wasActive = activeResume.value?.resumeId === resume.resumeId
+    await api.deleteResume(resume.resumeId)
+    const page = await api.listResumes()
+    resumes.value = page.items
+
+    if (!wasActive) return
+
+    activeResume.value = null
+    jobs.value = []
+    opts.value = []
+    selectedOpt.value = null
+    selectedJobAnalysis.value = null
+    selectedJobId.value = null
+    reviewModalOpen.value = false
+    reviewBlocks.value = []
+
+    const nextResume = resumes.value[0]
+    if (nextResume) {
+      activeResume.value = await api.getResume(nextResume.resumeId)
+      await loadResumeRelated(nextResume.resumeId)
+    }
+  }, '简历已删除')
 }
 
 async function loadResumeRelated(resumeId: number) {
@@ -527,7 +678,15 @@ function removeItem<T>(items: T[], index: number) {
         </div>
         <div class="topbar-actions">
           <span>{{ user?.account }}</span>
-          <button class="ghost" @click="loadWorkspace" :disabled="loading">
+          <div class="view-switch" v-if="isAdmin">
+            <button class="ghost" :class="{ active: activeView === 'workspace' }" @click="switchView('workspace')">
+              <FileText :size="16" /> 工作台
+            </button>
+            <button class="ghost" :class="{ active: activeView === 'admin' }" @click="switchView('admin')">
+              <ShieldCheck :size="16" /> 管理员
+            </button>
+          </div>
+          <button class="ghost" @click="refreshCurrentView" :disabled="loading">
             <RefreshCw :size="16" /> 刷新
           </button>
           <button class="ghost" @click="logout">
@@ -542,7 +701,7 @@ function removeItem<T>(items: T[], index: number) {
         <span v-if="error" class="bad">{{ error }}</span>
       </div>
 
-      <section class="workspace-grid">
+      <section v-if="activeView === 'workspace'" class="workspace-grid">
         <aside class="sidebar">
           <div class="section-head">
             <h2>简历</h2>
@@ -560,16 +719,27 @@ function removeItem<T>(items: T[], index: number) {
           </button>
 
           <div class="list">
-            <button
+            <div
               v-for="resume in resumes"
               :key="resume.resumeId"
-              class="list-item"
+              class="list-item resume-list-item"
               :class="{ active: activeResume?.resumeId === resume.resumeId }"
-              @click="selectResume(resume.resumeId)"
             >
-              <span>{{ resume.title }}</span>
-              <small>{{ resume.status }}</small>
-            </button>
+              <button class="resume-select" type="button" @click="selectResume(resume.resumeId)">
+                <span>{{ resume.title }}</span>
+                <small>{{ resume.status }}</small>
+              </button>
+              <button
+                class="icon-button danger resume-delete"
+                type="button"
+                :disabled="loading"
+                title="删除简历"
+                aria-label="删除简历"
+                @click.stop="deleteResume(resume)"
+              >
+                <Trash2 :size="15" />
+              </button>
+            </div>
           </div>
         </aside>
 
@@ -809,6 +979,183 @@ function removeItem<T>(items: T[], index: number) {
             </div>
           </section>
         </aside>
+      </section>
+
+      <section v-else-if="isAdmin" class="admin-layout">
+        <section class="admin-panel">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">User Management</p>
+              <h2>用户状态管理</h2>
+            </div>
+            <button class="ghost" @click="loadAdminUsers(1)" :disabled="loading">
+              <RefreshCw :size="16" /> 刷新用户
+            </button>
+          </div>
+
+          <div class="admin-toolbar">
+            <label>
+              搜索
+              <div class="inline-action">
+                <input v-model.trim="adminKeyword" placeholder="账号或邮箱" @keyup.enter="loadAdminUsers(1)" />
+                <button class="ghost" @click="loadAdminUsers(1)" :disabled="loading">
+                  <Search :size="16" /> 查询
+                </button>
+              </div>
+            </label>
+            <label>
+              状态
+              <select v-model="adminStatus" @change="loadAdminUsers(1)">
+                <option value="ALL">全部</option>
+                <option value="ACTIVE">启用</option>
+                <option value="DISABLED">禁用</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="admin-table">
+            <div class="admin-table-head user-grid">
+              <span>账号</span>
+              <span>邮箱</span>
+              <span>角色</span>
+              <span>状态</span>
+              <span>最近登录</span>
+              <span>操作</span>
+            </div>
+            <div v-for="row in adminUsers" :key="row.userId" class="admin-table-row user-grid">
+              <span class="strong">{{ row.account }}</span>
+              <span>{{ row.email || '-' }}</span>
+              <span>{{ row.role }}</span>
+              <span>
+                <mark class="status-pill" :class="row.status.toLowerCase()">{{ row.status }}</mark>
+              </span>
+              <span>{{ formatDateTime(row.lastLoginTime) }}</span>
+              <span class="row-actions">
+                <button
+                  v-if="row.status !== 'ACTIVE'"
+                  class="ghost"
+                  @click="updateAdminUserStatus(row, 'ACTIVE')"
+                  :disabled="loading"
+                >
+                  <UserCheck :size="15" /> 启用
+                </button>
+                <button
+                  v-else
+                  class="ghost danger-text"
+                  @click="updateAdminUserStatus(row, 'DISABLED')"
+                  :disabled="loading || row.userId === user?.userId"
+                >
+                  <UserX :size="15" /> 禁用
+                </button>
+              </span>
+            </div>
+            <p v-if="!adminUsers.length" class="empty-note">暂无匹配用户</p>
+          </div>
+
+          <div class="pager">
+            <button class="ghost" @click="loadAdminUsers(adminPage - 1)" :disabled="loading || adminPage <= 1">上一页</button>
+            <span>第 {{ adminPage }} / {{ adminTotalPages }} 页，共 {{ adminTotal }} 人</span>
+            <button class="ghost" @click="loadAdminUsers(adminPage + 1)" :disabled="loading || adminPage >= adminTotalPages">下一页</button>
+          </div>
+        </section>
+
+        <section class="admin-panel">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Template Upload</p>
+              <h2>上传 LaTeX 模板</h2>
+            </div>
+            <FileArchive :size="22" />
+          </div>
+          <div class="template-upload-grid">
+            <label>
+              模板名称
+              <input v-model.trim="templateUploadName" placeholder="例如：校园简洁模板" />
+            </label>
+            <label class="upload-box compact-upload">
+              <Upload :size="18" />
+              <span>{{ templateUploadFile?.name || '选择 .tex 或 .zip 文件' }}</span>
+              <input type="file" accept=".tex,.zip,application/zip" @change="onTemplateFileChange" />
+            </label>
+            <button class="primary" @click="uploadTemplate" :disabled="loading">
+              <Upload :size="17" /> 上传模板
+            </button>
+          </div>
+          <div class="template-list">
+            <div v-for="template in templates" :key="template.resumeTemplateId" class="template-row">
+              <span>{{ template.templateName }}</span>
+              <small>{{ template.latex }}</small>
+            </div>
+          </div>
+        </section>
+
+        <section class="admin-panel">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Audit Logs</p>
+              <h2>系统操作日志</h2>
+            </div>
+            <button class="ghost" @click="loadAdminLogs(1)" :disabled="loading">
+              <RefreshCw :size="16" /> 刷新日志
+            </button>
+          </div>
+
+          <div class="admin-toolbar">
+            <label>
+              搜索
+              <div class="inline-action">
+                <input v-model.trim="logKeyword" placeholder="操作、对象或详情" @keyup.enter="loadAdminLogs(1)" />
+                <button class="ghost" @click="loadAdminLogs(1)" :disabled="loading">
+                  <Search :size="16" /> 查询
+                </button>
+              </div>
+            </label>
+            <label>
+              类型
+              <select v-model="logAction" @change="loadAdminLogs(1)">
+                <option value="ALL">全部</option>
+                <option value="REGISTER">用户注册</option>
+                <option value="LOGIN">用户登录</option>
+                <option value="UPLOAD_RESUME">上传简历</option>
+                <option value="UPDATE_RESUME">保存简历</option>
+                <option value="DELETE_RESUME">删除简历</option>
+                <option value="GENERATE_LATEX">生成 LaTeX</option>
+                <option value="DOWNLOAD_LATEX">下载 LaTeX</option>
+                <option value="ANALYZE_JOB">岗位分析</option>
+                <option value="OPTIMIZE_RESUME">生成优化</option>
+                <option value="APPLY_OPTIMIZATION">采纳优化</option>
+                <option value="UPDATE_OPT_STATUS">更新优化状态</option>
+                <option value="DISABLE_USER">禁用用户</option>
+                <option value="ENABLE_USER">启用用户</option>
+                <option value="UPLOAD_TEMPLATE">上传模板</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="admin-table">
+            <div class="admin-table-head log-grid">
+              <span>时间</span>
+              <span>操作</span>
+              <span>对象</span>
+              <span>详情</span>
+              <span>IP</span>
+            </div>
+            <div v-for="row in adminLogs" :key="row.logId" class="admin-table-row log-grid">
+              <span>{{ formatDateTime(row.createdAt) }}</span>
+              <span>{{ row.action }}</span>
+              <span>{{ row.targetType || '-' }} {{ row.targetId || '' }}</span>
+              <span>{{ row.detail || '-' }}</span>
+              <span>{{ row.ip || '-' }}</span>
+            </div>
+            <p v-if="!adminLogs.length" class="empty-note">暂无操作日志</p>
+          </div>
+
+          <div class="pager">
+            <button class="ghost" @click="loadAdminLogs(logPage - 1)" :disabled="loading || logPage <= 1">上一页</button>
+            <span>第 {{ logPage }} / {{ logTotalPages }} 页，共 {{ logTotal }} 条</span>
+            <button class="ghost" @click="loadAdminLogs(logPage + 1)" :disabled="loading || logPage >= logTotalPages">下一页</button>
+          </div>
+        </section>
       </section>
 
       <div v-if="reviewModalOpen && selectedOpt" class="modal-backdrop">
